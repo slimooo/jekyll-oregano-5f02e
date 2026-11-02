@@ -1,6 +1,0 @@
-node_modules
-.next
-.vercel
-data/stocks-raw.json
-*.tsbuildinfo
-next-env.d.ts
