@@ -22,3 +22,4 @@ exclude:
   - README.md
   - netlify.toml
   - stackbit-build.sh
+  - bourse-app
