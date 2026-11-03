@@ -1,0 +1,674 @@
+[
+{
+"s": "HRPK.DE",
+"n": "7C Solarparken AG"
+},
+{
+"s": "AALB.AS",
+"n": "Aalberts N.V."
+},
+{
+"s": "ABBN.SW",
+"n": "ABB Ltd"
+},
+{
+"s": "AGLX.OL",
+"n": "Agilyx ASA"
+},
+{
+"s": "ABNB",
+"n": "Airbnb, Inc."
+},
+{
+"s": "AKAM",
+"n": "Akamai Technologies, Inc."
+},
+{
+"s": "AQN.TO",
+"n": "Algonquin Power & Utilities Corp."
+},
+{
+"s": "AEP",
+"n": "American Electric Power Company, Inc."
+},
+{
+"s": "AWR",
+"n": "American States Water Company"
+},
+{
+"s": "AWK",
+"n": "American Water Works Company, Inc."
+},
+{
+"s": "AMGN",
+"n": "Amgen Inc."
+},
+{
+"s": "AMUN.PA",
+"n": "Amundi S.A."
+},
+{
+"s": "ARM",
+"n": "Arm Holdings plc"
+},
+{
+"s": "AZN.L",
+"n": "AstraZeneca PLC"
+},
+{
+"s": "BANB.SW",
+"n": "Bachem Holding AG"
+},
+{
+"s": "BMI",
+"n": "Badger Meter, Inc."
+},
+{
+"s": "BLDP.TO",
+"n": "Ballard Power Systems Inc."
+},
+{
+"s": "BFIT.AS",
+"n": "Basic-Fit N.V."
+},
+{
+"s": "BCRX",
+"n": "BioCryst Pharmaceuticals, Inc."
+},
+{
+"s": "BIIB",
+"n": "Biogen Inc."
+},
+{
+"s": "BNTX",
+"n": "BioNTech SE"
+},
+{
+"s": "BE",
+"n": "Bloom Energy Corporation"
+},
+{
+"s": "BMY",
+"n": "Bristol-Myers Squibb Company"
+},
+{
+"s": "BRKR",
+"n": "Bruker Corporation"
+},
+{
+"s": "1211.HK",
+"n": "BYD Company Limited"
+},
+{
+"s": "CNR.TO",
+"n": "Canadian National Railway Company"
+},
+{
+"s": "CSIQ",
+"n": "Canadian Solar Inc."
+},
+{
+"s": "ALCRB.PA",
+"n": "Carbios SAS"
+},
+{
+"s": "CWR.L",
+"n": "Ceres Power Holdings plc"
+},
+{
+"s": "0855.HK",
+"n": "China Water Affairs Group Limited"
+},
+{
+"s": "CSCO",
+"n": "Cisco Systems, Inc."
+},
+{
+"s": "CLH",
+"n": "Clean Harbors, Inc."
+},
+{
+"s": "NET",
+"n": "Cloudflare, Inc."
+},
+{
+"s": "SBS",
+"n": "Companhia de Saneamento Básico do Estado de São Paulo - SABESP"
+},
+{
+"s": "CRWD",
+"n": "CrowdStrike Holdings, Inc."
+},
+{
+"s": "CCI",
+"n": "Crown Castle Inc."
+},
+{
+"s": "6367.T",
+"n": "Daikin Industries,Ltd."
+},
+{
+"s": "DHR",
+"n": "Danaher Corporation"
+},
+{
+"s": "DBG.PA",
+"n": "Derichebourg SA"
+},
+{
+"s": "DLB",
+"n": "Dolby Laboratories, Inc."
+},
+{
+"s": "0451.HK",
+"n": "Dynasty Digital Holdings Limited"
+},
+{
+"s": "6361.T",
+"n": "Ebara Corporation"
+},
+{
+"s": "ECL",
+"n": "Ecolab Inc."
+},
+{
+"s": "EIX",
+"n": "Edison International"
+},
+{
+"s": "LLY",
+"n": "Eli Lilly and Company"
+},
+{
+"s": "ELI.BR",
+"n": "Elia Group SA/NV"
+},
+{
+"s": "EKT.DE",
+"n": "Energiekontor AG"
+},
+{
+"s": "ERII",
+"n": "Energy Recovery, Inc."
+},
+{
+"s": "ENPH",
+"n": "Enphase Energy, Inc."
+},
+{
+"s": "ESS",
+"n": "Essex Property Trust, Inc."
+},
+{
+"s": "EL",
+"n": "The Estée Lauder Companies Inc."
+},
+{
+"s": "EXR",
+"n": "Extra Space Storage Inc."
+},
+{
+"s": "FSLY",
+"n": "Fastly, Inc."
+},
+{
+"s": "FAST.AS",
+"n": "Fastned B.V."
+},
+{
+"s": "FIG",
+"n": "Figma, Inc."
+},
+{
+"s": "FSLR",
+"n": "First Solar, Inc."
+},
+{
+"s": "FCEL",
+"n": "FuelCell Energy, Inc."
+},
+{
+"s": "FREN.SW",
+"n": "Fundamenta Real Estate AG"
+},
+{
+"s": "GMAB.CO",
+"n": "Genmab A/S"
+},
+{
+"s": "GILD",
+"n": "Gilead Sciences, Inc."
+},
+{
+"s": "GTLB",
+"n": "GitLab Inc."
+},
+{
+"s": "GRP.IR",
+"n": "Greencoat Renewables PLC"
+},
+{
+"s": "UKW.L",
+"n": "Greencoat Uk Wind Plc"
+},
+{
+"s": "GYM.L",
+"n": "The Gym Group plc"
+},
+{
+"s": "HLMA.L",
+"n": "Halma plc"
+},
+{
+"s": "HALO",
+"n": "Halozyme Therapeutics, Inc."
+},
+{
+"s": "HLAG.DE",
+"n": "Hapag-Lloyd Aktiengesellschaft"
+},
+{
+"s": "HCA",
+"n": "HCA Healthcare, Inc."
+},
+{
+"s": "2498.TW",
+"n": "HTC Corporation"
+},
+{
+"s": "H.TO",
+"n": "Hydro One Limited"
+},
+{
+"s": "ICAD.PA",
+"n": "Icade"
+},
+{
+"s": "ILMN",
+"n": "Illumina, Inc."
+},
+{
+"s": "INCY",
+"n": "Incyte Corporation"
+},
+{
+"s": "DNR.MI",
+"n": "Industrie De Nora S.p.A."
+},
+{
+"s": "ICE",
+"n": "Intercontinental Exchange, Inc."
+},
+{
+"s": "IP",
+"n": "International Paper Company"
+},
+{
+"s": "IONS",
+"n": "Ionis Pharmaceuticals, Inc."
+},
+{
+"s": "IPN.PA",
+"n": "Ipsen S.A."
+},
+{
+"s": "IQV",
+"n": "IQVIA Holdings Inc."
+},
+{
+"s": "ITM.L",
+"n": "ITM Power Plc"
+},
+{
+"s": "ITRI",
+"n": "Itron, Inc."
+},
+{
+"s": "JKS",
+"n": "Jinko Holdings Limited"
+},
+{
+"s": "JNJ",
+"n": "Johnson & Johnson"
+},
+{
+"s": "KAI",
+"n": "Kadant Inc."
+},
+{
+"s": "KARN.SW",
+"n": "Kardex Holding AG"
+},
+{
+"s": "LT.NS",
+"n": "Larsen & Toubro Limited"
+},
+{
+"s": "7366.T",
+"n": "LITALICO Inc."
+},
+{
+"s": "LMP.L",
+"n": "LondonMetric Property Plc"
+},
+{
+"s": "MEDCL.PA",
+"n": "MedinCell S.A."
+},
+{
+"s": "MRN.PA",
+"n": "Mersen S.A."
+},
+{
+"s": "MTD",
+"n": "Mettler-Toledo International Inc."
+},
+{
+"s": "4188.T",
+"n": "Mitsubishi Chemical Group Corporation"
+},
+{
+"s": "MBGL",
+"n": "Mobility Global, Inc."
+},
+{
+"s": "MOBN.SW",
+"n": "Mobimo Holding AG"
+},
+{
+"s": "MRNA",
+"n": "Moderna, Inc."
+},
+{
+"s": "MOH",
+"n": "Molina Healthcare, Inc."
+},
+{
+"s": "MDB",
+"n": "MongoDB, Inc."
+},
+{
+"s": "MSCI",
+"n": "MSCI Inc."
+},
+{
+"s": "NEL.OL",
+"n": "Nel ASA"
+},
+{
+"s": "NEE",
+"n": "NextEra Energy, Inc."
+},
+{
+"s": "6788.T",
+"n": "Nihon Trim Co., Ltd."
+},
+{
+"s": "NKE",
+"n": "NIKE, Inc."
+},
+{
+"s": "NC5A.DE",
+"n": "NorCom Information Technology GmbH & Co. KGaA"
+},
+{
+"s": "NDX1.DE",
+"n": "Nordex SE"
+},
+{
+"s": "NSC",
+"n": "Norfolk Southern Corporation"
+},
+{
+"s": "NOVN.SW",
+"n": "Novartis AG"
+},
+{
+"s": "ORA",
+"n": "Ormat Technologies, Inc."
+},
+{
+"s": "OVH.PA",
+"n": "OVH Groupe S.A."
+},
+{
+"s": "PHM.MC",
+"n": "Pharma Mar, S.A."
+},
+{
+"s": "PHARM.AS",
+"n": "Pharming Group N.V."
+},
+{
+"s": "PLNT",
+"n": "Planet Fitness, Inc."
+},
+{
+"s": "PLUG",
+"n": "Plug Power Inc."
+},
+{
+"s": "PLX.PA",
+"n": "Pluxee N.V."
+},
+{
+"s": "PRY.MI",
+"n": "Prysmian S.p.A."
+},
+{
+"s": "O",
+"n": "Realty Income Corporation"
+},
+{
+"s": "RED.MC",
+"n": "Redeia Corporación, S.A."
+},
+{
+"s": "REGN",
+"n": "Regeneron Pharmaceuticals, Inc."
+},
+{
+"s": "RWC.AX",
+"n": "Reliance Worldwide Corporation Limited"
+},
+{
+"s": "RSG",
+"n": "Republic Services, Inc."
+},
+{
+"s": "RO.SW",
+"n": "Roche Holding AG"
+},
+{
+"s": "ROP",
+"n": "Roper Technologies, Inc."
+},
+{
+"s": "RPRX",
+"n": "Royalty Pharma plc"
+},
+{
+"s": "SPGI",
+"n": "S&P Global Inc."
+},
+{
+"s": "SGE.L",
+"n": "The Sage Group plc"
+},
+{
+"s": "CRM",
+"n": "Salesforce, Inc."
+},
+{
+"s": "SAN.PA",
+"n": "Sanofi"
+},
+{
+"s": "SAP.DE",
+"n": "SAP SE"
+},
+{
+"s": "SVT.L",
+"n": "Severn Trent PLC"
+},
+{
+"s": "SHOP",
+"n": "Shopify Inc."
+},
+{
+"s": "SFZN.SW",
+"n": "Siegfried Holding AG"
+},
+{
+"s": "S92.DE",
+"n": "SMA Solar Technology AG"
+},
+{
+"s": "SNOW",
+"n": "Snowflake Inc."
+},
+{
+"s": "SEDG",
+"n": "SolarEdge Technologies, Inc."
+},
+{
+"s": "SLR.MC",
+"n": "Solaria Energía y Medio Ambiente, S.A."
+},
+{
+"s": "SONO",
+"n": "Sonos, Inc."
+},
+{
+"s": "SOON.SW",
+"n": "Sonova Holding AG"
+},
+{
+"s": "SPCX",
+"n": "Space Exploration Technologies Corp."
+},
+{
+"s": "SSE.L",
+"n": "SSE plc"
+},
+{
+"s": "SRAIL.SW",
+"n": "Stadler Rail AG"
+},
+{
+"s": "STEM",
+"n": "Stem, Inc."
+},
+{
+"s": "1911.T",
+"n": "Sumitomo Forestry Co., Ltd."
+},
+{
+"s": "RUN",
+"n": "Sunrun Inc."
+},
+{
+"s": "SPSN.SW",
+"n": "Swiss Prime Site AG"
+},
+{
+"s": "TSM",
+"n": "Taiwan Semiconductor Manufacturing Company Limited"
+},
+{
+"s": "TRN.MI",
+"n": "Terna S.p.A."
+},
+{
+"s": "TOM.OL",
+"n": "Tomra Systems ASA"
+},
+{
+"s": "TWLO",
+"n": "Twilio Inc."
+},
+{
+"s": "UTHR",
+"n": "United Therapeutics Corporation"
+},
+{
+"s": "UU.L",
+"n": "United Utilities Group PLC"
+},
+{
+"s": "UNH",
+"n": "UnitedHealth Group Incorporated"
+},
+{
+"s": "VIE.PA",
+"n": "Veolia Environnement SA"
+},
+{
+"s": "VLTO",
+"n": "Veralto Corporation"
+},
+{
+"s": "VER.VI",
+"n": "VERBUND AG"
+},
+{
+"s": "VRSN",
+"n": "VeriSign, Inc."
+},
+{
+"s": "VRTX",
+"n": "Vertex Pharmaceuticals Incorporated"
+},
+{
+"s": "VWS.CO",
+"n": "Vestas Wind Systems A/S"
+},
+{
+"s": "VTRS",
+"n": "Viatris Inc."
+},
+{
+"s": "VOTR.DE",
+"n": "Voltatron AG"
+},
+{
+"s": "DIS",
+"n": "The Walt Disney Company"
+},
+{
+"s": "WDP.BR",
+"n": "Warehouses De Pauw SA"
+},
+{
+"s": "WCN",
+"n": "Waste Connections, Inc."
+},
+{
+"s": "WM",
+"n": "Waste Management, Inc."
+},
+{
+"s": "WTS",
+"n": "Watts Water Technologies, Inc."
+},
+{
+"s": "1810.HK",
+"n": "Xiaomi Corporation"
+},
+{
+"s": "0968.HK",
+"n": "Xinyi Solar Holdings Limited"
+},
+{
+"s": "XYL",
+"n": "Xylem Inc."
+},
+{
+"s": "YUMC",
+"n": "Yum China Holdings, Inc."
+},
+{
+"s": "ORSTED.CO",
+"n": "Ørsted A/S"
+}
+]
