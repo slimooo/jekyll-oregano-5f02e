@@ -12,11 +12,7 @@ export const REGION_LABEL: Record<string, string> = {
 };
 export const EUROPE = ['fr', 'de', 'gb', 'nl', 'es', 'it', 'ch', 'se', 'dk', 'no', 'fi', 'be', 'at', 'ie', 'pt', 'pl', 'gr', 'lu'];
 
-export const SECTOR_FR: Record<string, string> = {
-  'Basic Materials': 'Matériaux de base', 'Communication Services': 'Communication', 'Consumer Cyclical': 'Consommation cyclique',
-  'Consumer Defensive': 'Consommation de base', Energy: 'Énergie', 'Financial Services': 'Services financiers', Healthcare: 'Santé',
-  Industrials: 'Industrie', 'Real Estate': 'Immobilier', Technology: 'Technologie', Utilities: 'Services publics',
-};
+export { SECTOR_FR } from './scoring';
 
 export const norm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 const NAMES = STOCKS.map(s => norm(s.n));
