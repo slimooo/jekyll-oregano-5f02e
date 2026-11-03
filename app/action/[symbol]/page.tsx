@@ -178,7 +178,8 @@ export default function StockPage({ params }: { params: Promise<{ symbol: string
       {d.warnings.length > 0 && <p className="muted">⚠︎ {d.warnings.join(' ')}</p>}
       <p className="disclaimer">
         Données : Yahoo Finance (comptes annuels publiés, dividendes versés, cours différé), mises à jour le {new Date(d.updatedAt).toLocaleString('fr-FR')}.
-        L’évolution du cours et les prévisions ne sont volontairement pas prises en compte. Outil pédagogique, pas un conseil en investissement. <Link href="/methode">Voir la méthode</Link>.
+        L’évolution du cours et les prévisions ne sont volontairement pas prises en compte. Rejoué sur 2016-2026 (actions américaines), le score a surtout
+        permis d’écarter les sociétés fragiles ; il n’a pas battu l’indice S&amp;P 500. Outil pédagogique, pas un conseil en investissement. <Link href="/methode">Voir la méthode</Link>.
       </p>
     </>
   );
