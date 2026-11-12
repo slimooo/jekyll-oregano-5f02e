@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { use, useEffect, useState } from 'react';
 import type { Analysis, Category } from '@/lib/analysis';
 import BarChart from '@/components/BarChart';
+import Scale from '@/components/Scale';
+import type { GaugeBand, PriceTargets } from '@/lib/scoring';
 import { useFavorites } from '@/lib/favorites';
 
 const nf = (v: number, d = 1) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d, minimumFractionDigits: d }).format(v);
@@ -12,7 +14,6 @@ const fp = (v: number | null, d = 1) => (v === null ? '—' : nf(v * 100, d) + '
 const status = (s: number | null) => (s === null ? 'na' : s >= 7 ? 'good' : s >= 4 ? 'mid' : 'bad');
 const ICON: Record<string, string> = { good: '✓', mid: '!', bad: '✕', na: '–' };
 const STATUS_LABEL: Record<string, string> = { good: 'Favorable', mid: 'Moyen', bad: 'Défavorable', na: 'n.d.' };
-const color = (s: number | null) => `var(--${status(s === null ? null : s / 10)})`;
 
 function Gauge({ score, level }: { score: number; level: Analysis['verdictLevel'] }) {
   const r = 38, c = 2 * Math.PI * r;
@@ -28,6 +29,59 @@ function Gauge({ score, level }: { score: number; level: Analysis['verdictLevel'
   );
 }
 
+const SCORE_BANDS: GaugeBand[] = [{ from: 0, to: 40, s: 'bad' }, { from: 40, to: 70, s: 'mid' }, { from: 70, to: 100, s: 'good' }];
+
+/** Cours actuel placé sur l'échelle des prix d'achat : vert ≤ prix d'achat, jaune ≤ prix raisonnable, rouge au-delà. */
+function PriceCard({ t }: { t: PriceTargets }) {
+  const p = t.price;
+  const f2 = (v: number) => nf(v, v >= 1000 ? 0 : 2) + ' ' + t.currency;
+  const ok = p !== null && t.buy !== null && t.fair !== null;
+  let bands: GaugeBand[] = [], lo = 0, hi = 1;
+  if (ok) {
+    const buy = t.buy as number, fair = t.fair as number;
+    hi = Math.max(fair * 1.6, (p as number) * 1.08, buy * 2);
+    lo = 0;
+    bands = [{ from: lo, to: buy, s: 'good' }, { from: buy, to: fair, s: 'mid' }, { from: fair, to: hi, s: 'bad' }];
+  }
+  const gap = ok ? (t.buy as number) / (p as number) - 1 : null;
+  const zone = !ok ? null : (p as number) <= (t.buy as number) ? 'good' : (p as number) <= (t.fair as number) ? 'mid' : 'bad';
+  return (
+    <section className="card">
+      <h2>Prix de l’action</h2>
+      <div className="price-big">{p !== null ? f2(p) : '—'}</div>
+      <p className="muted" style={{ margin: '2px 0 0' }}>Cours actuel (différé)</p>
+      {ok ? (
+        <>
+          <Scale v={p as number} lo={lo} hi={hi} bands={bands} unit="price" ccy={t.currency} valueText={f2(p as number)}
+            labels={{ good: 'Achat', mid: 'Correct', bad: 'Trop cher' }} />
+          <div className="price-grid">
+            <div className="kpi"><div className="k">Prix d’achat intéressant</div><div className="v" style={{ color: 'var(--good)' }}>≤ {f2(t.buy as number)}</div></div>
+            <div className="kpi"><div className="k">Prix raisonnable max.</div><div className="v" style={{ color: 'var(--mid)' }}>≤ {f2(t.fair as number)}</div></div>
+          </div>
+          <p style={{ margin: '10px 0 0', fontSize: '.9rem' }}>
+            {zone === 'good' ? <>✓ Le cours est <strong>sous le prix d’achat</strong> calculé ({nf((gap as number) * 100, 0)} % de marge).</>
+              : zone === 'mid' ? <>! Le cours est dans la zone raisonnable : il faudrait une baisse de <strong>{nf(-(gap as number) * 100, 0)} %</strong> pour atteindre le prix d’achat.</>
+              : <>✕ Le cours est au-dessus du prix raisonnable : il faudrait une baisse de <strong>{nf(-(gap as number) * 100, 0)} %</strong> pour atteindre le prix d’achat.</>}
+          </p>
+          <details style={{ marginTop: 10 }}>
+            <summary>Détail par méthode ({t.methods.length})</summary>
+            {t.methods.map(m => {
+              const st = (p as number) <= m.buy ? 'good' : (p as number) <= m.fair ? 'mid' : 'bad';
+              return (
+                <div key={m.id} className="method-row">
+                  <div><span className={'dot ' + st} />{m.label}<div className="crit-rule">{m.rule}</div></div>
+                  <div className="r">achat ≤ {f2(m.buy)}<div className="crit-rule">raisonnable ≤ {f2(m.fair)}</div></div>
+                </div>
+              );
+            })}
+            <p className="crit-rule">Prix retenus : médiane des méthodes. Calcul sur les comptes publiés uniquement, sans prévision.</p>
+          </details>
+        </>
+      ) : <p className="muted">{t.note}</p>}
+    </section>
+  );
+}
+
 function CategoryCard({ c, open, onToggle }: { c: Category; open: boolean; onToggle: () => void }) {
   const st = status(c.score === null ? null : c.score / 10);
   return (
@@ -36,7 +90,8 @@ function CategoryCard({ c, open, onToggle }: { c: Category; open: boolean; onTog
         <h2 style={{ margin: 0 }}>{c.label}</h2>
         <span className={'pill ' + st}>{ICON[st]} {c.score === null ? 'n.d.' : `${c.score}/100`}</span>
       </button>
-      <div className="bar-track"><div className="bar-fill" style={{ width: `${c.score ?? 0}%`, background: color(c.score) }} /></div>
+      {c.score !== null ? <Scale v={c.score} lo={0} hi={100} bands={SCORE_BANDS} unit="score" valueText={`${c.score}/100`} compact />
+        : <div className="bar-track" />}
       {c.note && <p className="muted" style={{ margin: '6px 0 0' }}>{c.note}</p>}
       {open && c.criteria.map(k => {
         const s = status(k.score);
@@ -47,6 +102,7 @@ function CategoryCard({ c, open, onToggle }: { c: Category; open: boolean; onTog
               <span className={'pill ' + s} title={STATUS_LABEL[s]}>{ICON[s]}<span className="sr">{STATUS_LABEL[s]}</span></span>
             </div>
             <div className="crit-value" style={{ textAlign: 'left', marginTop: 2 }}>{k.value}</div>
+            {k.gauge && <Scale {...k.gauge} />}
             <div className="crit-rule">{k.rule}</div>
             {k.comment && <div className="crit-rule">ℹ︎ {k.comment}</div>}
           </div>
@@ -76,7 +132,8 @@ export default function StockPage({ params }: { params: Promise<{ symbol: string
   }, [sym]);
 
   useEffect(() => {
-    if (data) update({ s: data.symbol, n: data.name, score: data.score, level: data.verdictLevel, verdict: data.verdict });
+    if (data) update({ s: data.symbol, n: data.name, score: data.score, level: data.verdictLevel, verdict: data.verdict,
+      price: data.price ?? undefined, buy: data.priceTargets?.buy ?? undefined, fair: data.priceTargets?.fair ?? undefined, ccy: data.currency });
   }, [data, update]);
 
   if (err) return (
@@ -119,6 +176,8 @@ export default function StockPage({ params }: { params: Promise<{ symbol: string
             <p style={{ margin: '4px 0 0', fontSize: '.92rem' }}>{d.verdictText}</p>
           </div>
         </div>
+        <Scale v={d.score} lo={0} hi={100} bands={SCORE_BANDS} unit="score" valueText={`${d.score}/100`}
+          labels={{ bad: 'Pas pertinent', mid: 'À étudier', good: 'Achat' }} />
         {d.redFlags.length > 0 && (
           <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: 'var(--bad-soft)', color: 'var(--bad)', fontSize: '.9rem' }}>
             <strong>Signaux d’alerte</strong>
@@ -136,6 +195,8 @@ export default function StockPage({ params }: { params: Promise<{ symbol: string
           </div>
         </div>
       </section>
+
+      {d.priceTargets && <PriceCard t={d.priceTargets} />}
 
       {d.categories.map(c => <CategoryCard key={c.id} c={c} open={!!open[c.id]} onToggle={() => setOpen(o => ({ ...o, [c.id]: !o[c.id] }))} />)}
 

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
 
+const money = (v: number, ccy?: string) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: v >= 1000 ? 0 : 2 }).format(v) + (ccy ? ' ' + ccy : '');
+
 export default function Favoris() {
   const { favs, toggle, update } = useFavorites();
   const [filter, setFilter] = useState('');
@@ -26,7 +28,7 @@ export default function Favoris() {
         const it = queue.shift()!;
         try {
           const r = await fetch('/api/analyze/' + encodeURIComponent(it.s));
-          if (r.ok) { const d = await r.json(); update({ s: it.s, n: it.n, score: d.score, level: d.verdictLevel, verdict: d.verdict }); }
+          if (r.ok) { const d = await r.json(); update({ s: it.s, n: it.n, score: d.score, level: d.verdictLevel, verdict: d.verdict, price: d.price ?? undefined, buy: d.priceTargets?.buy ?? undefined, fair: d.priceTargets?.fair ?? undefined, ccy: d.currency }); }
           else update({ s: it.s, n: it.n, verdict: 'analyse indisponible' });
         } catch { /* réseau */ }
         setProgress({ done: ++done, total: todo.length });
@@ -81,6 +83,12 @@ export default function Favoris() {
                   <Link href={`/action/${encodeURIComponent(x.s)}`} className="main">
                     <div className="name">{x.n}</div>
                     <div className="meta">{x.s}{x.verdict ? ' · ' + x.verdict : ' · pas encore analysée'}</div>
+                    {typeof x.price === 'number' && (
+                      <div className="meta">
+                        <span className={'dot ' + (typeof x.buy !== 'number' ? 'bad' : x.price <= x.buy ? 'good' : typeof x.fair === 'number' && x.price <= x.fair ? 'mid' : 'bad')} />
+                        {money(x.price, x.ccy)}{typeof x.buy === 'number' ? ` · achat ≤ ${money(x.buy)}` : ' · pas de prix d’achat'}
+                      </div>
+                    )}
                   </Link>
                   {typeof x.score === 'number' && <span className={'pill ' + (x.level === 'buy' ? 'good' : x.level === 'watch' ? 'mid' : 'bad')}>{x.score}/100</span>}
                   <button className="star on" aria-label="Retirer des favoris" onClick={() => toggle(x)}>★</button>
