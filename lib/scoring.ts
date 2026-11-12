@@ -12,7 +12,14 @@
  */
 
 export type Status = 'good' | 'mid' | 'bad' | 'na';
-export interface Criterion { id: string; label: string; value: string; score: number | null; weight: number; rule: string; comment?: string }
+/** Échelle visuelle d'un critère (zones défavorable / moyen / favorable), alignée sur la notation. */
+export type GaugeUnit = 'pct' | 'x' | 'num' | 'yrs' | 'pts';
+export interface GaugeBand { from: number; to: number; s: 'good' | 'mid' | 'bad' }
+export interface Gauge { v: number; lo: number; hi: number; bands: GaugeBand[]; unit: GaugeUnit }
+export interface Criterion { id: string; label: string; value: string; score: number | null; weight: number; rule: string; comment?: string; gauge?: Gauge }
+/** Prix d'achat issus de chaque méthode de valorisation, dans la devise de cotation. */
+export interface PriceMethod { id: string; label: string; buy: number; fair: number; rule: string }
+export interface PriceTargets { price: number | null; currency: string; methods: PriceMethod[]; buy: number | null; fair: number | null; note?: string }
 export interface Category { id: string; label: string; weight: number; score: number | null; criteria: Criterion[]; note?: string }
 export interface PeerRow { symbol: string; name: string; self?: boolean; pe: number | null; evEbitda: number | null; pb: number | null; dy: number | null; netMargin: number | null; roe: number | null; de: number | null }
 export interface Analysis {
@@ -25,6 +32,7 @@ export interface Analysis {
   dividends: { byYear: { year: number; amount: number }[]; consecutiveYears: number; firstYear: number | null; noCutYears: number; currency: string };
   peers: PeerRow[]; peerSource: string;
   graham: { number: number | null; marginOfSafety: number | null };
+  priceTargets: PriceTargets;
   riskFree: number; updatedAt: string; warnings: string[];
 }
 
@@ -70,6 +78,27 @@ const num = (v: unknown): number | null => (isNum(v) ? v : null);
 const clamp = (v: number, a = 0, b = 10) => Math.max(a, Math.min(b, v));
 /** Interpolation linéaire : `bad` -> 0, `good` -> 10 (fonctionne dans les deux sens). */
 const lin = (v: number, bad: number, good: number) => clamp(((v - bad) / (good - bad)) * 10);
+/** Échelle pour un critère noté par `lin(v, bad, good)` : zones aux notes 4 et 7 (seuils de couleur de l'interface). */
+function gz(v: number | null, bad: number, good: number, unit: GaugeUnit, floor?: number, ceil?: number): Gauge | undefined {
+  if (v === null || !Number.isFinite(v)) return undefined;
+  const at = (sc: number) => bad + (good - bad) * (sc / 10);
+  const b4 = at(4), b7 = at(7);
+  const span = Math.abs(good - bad);
+  let lo = Math.min(bad, good) - span * 0.3, hi = Math.max(bad, good) + span * 0.3;
+  if (floor !== undefined) lo = Math.max(lo, floor);
+  if (ceil !== undefined) hi = Math.min(hi, ceil);
+  const bands: GaugeBand[] = good > bad
+    ? [{ from: lo, to: b4, s: 'bad' }, { from: b4, to: b7, s: 'mid' }, { from: b7, to: hi, s: 'good' }]
+    : [{ from: lo, to: b7, s: 'good' }, { from: b7, to: b4, s: 'mid' }, { from: b4, to: hi, s: 'bad' }];
+  return { v, lo, hi, bands, unit };
+}
+/** Échelle à zones explicites (critères notés par paliers). */
+function gzB(v: number | null, unit: GaugeUnit, lo: number, ...cuts: [number, GaugeBand['s']][]): Gauge | undefined {
+  if (v === null || !Number.isFinite(v)) return undefined;
+  const bands: GaugeBand[] = []; let from = lo;
+  for (const [to, st] of cuts) { bands.push({ from, to, s: st }); from = to; }
+  return { v, lo, hi: from, bands, unit };
+}
 const avg = (a: (number | null)[]) => { const b = a.filter(isNum); return b.length ? b.reduce((x, y) => x + y, 0) / b.length : null; };
 const median = (a: (number | null)[]) => { const b = a.filter(isNum).sort((x, y) => x - y); if (!b.length) return null; const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
 const nf = (d: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -206,26 +235,26 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
   const shChg = sh0 && sh1 && rows.length >= 2 ? Math.pow(sh1 / sh0, 1 / (rows.length - 1)) - 1 : null;
   const payer = consecutive > 0 && (dy === null || dy > 0);
   const divC: Criterion[] = [
-    { id: 'div-shy', label: 'Rendement pour l’actionnaire (dividendes + rachats nets)', weight: 3,
+    { id: 'div-shy', gauge: gz(shYield, 0, 0.06, 'pct'), label: 'Rendement pour l’actionnaire (dividendes + rachats nets)', weight: 3,
       value: shYield === null ? 'n.d.' : `${pct(shYield)} (dividende ${pct(dy ?? 0)}, rachats nets ${pct(buyback ?? 0)})`,
       score: shYield === null ? null : lin(shYield, 0, 0.06),
       rule: 'Dividende + baisse nette du nombre d’actions sur un an : ≥ 6 % très favorable ; < 0 = dilution (Boudoukh et al., 2007)' },
-    { id: 'div-years', label: 'Ancienneté du dividende', weight: 1,
+    { id: 'div-years', gauge: payer ? gzB(consecutive, 'yrs', 0, [5, 'bad'], [10, 'mid'], [30, 'good']) : undefined, label: 'Ancienneté du dividende', weight: 1,
       value: consecutive ? `${consecutive} an${consecutive > 1 ? 's' : ''} consécutifs (depuis ${firstYear})` : 'Aucun dividende récent',
       score: !payer ? null : consecutive >= 25 ? 10 : consecutive >= 15 ? 9 : consecutive >= 10 ? 8 : consecutive >= 5 ? 6 : consecutive >= 2 ? 3 : 2,
       rule: '≥ 25 ans = « aristocrate » ; ≥ 10 ans = fiable ; < 5 ans = historique court (non noté sans dividende)',
       comment: histStart && firstYear && firstYear <= histStart + 1 ? `Les données commencent en ${histStart} : l'ancienneté réelle est probablement supérieure.` : undefined },
-    { id: 'div-nocut', label: 'Dividende maintenu ou en hausse', weight: 1,
+    { id: 'div-nocut', gauge: payer ? gzB(noCut, 'yrs', 0, [2, 'bad'], [10, 'mid'], [25, 'good']) : undefined, label: 'Dividende maintenu ou en hausse', weight: 1,
       value: consecutive ? `${noCut} an${noCut > 1 ? 's' : ''} sans baisse notable` : '—',
       score: !payer ? null : noCut >= 20 ? 10 : noCut >= 10 ? 8.5 : noCut >= 5 ? 6.5 : noCut >= 2 ? 4 : 1,
       rule: 'Années consécutives où le dividende total n’a pas baissé de plus de 10 %' },
-    { id: 'div-yield', label: 'Rendement du dividende', weight: 1, value: pct(dy, 2),
+    { id: 'div-yield', gauge: payer ? gzB(dy, 'pct', 0, [0.012, 'bad'], [0.021, 'mid'], [0.09, 'good'], [0.12, 'mid']) : undefined, label: 'Rendement du dividende', weight: 1, value: pct(dy, 2),
       score: !payer || dy === null ? null : dy > 0.09 ? 4 : dy >= 0.03 ? 10 : lin(dy, 0, 0.03),
       rule: '3 – 9 % idéal ; > 9 % = risque de « piège à dividende »' },
-    { id: 'div-payout', label: 'Taux de distribution', weight: 2, value: pct(payout, 0),
+    { id: 'div-payout', gauge: payer ? (isReit ? gzB(payout, 'pct', 0, [0.9, 'good'], [1.1, 'mid'], [1.4, 'bad']) : gzB(payout, 'pct', 0, [0.6, 'good'], [0.8, 'mid'], [1.2, 'bad'])) : undefined, label: 'Taux de distribution', weight: 2, value: pct(payout, 0),
       score: payout === null || !payer ? null : payout <= 0 ? 2 : isReit ? (payout <= 0.9 ? 9 : payout <= 1.1 ? 5 : 1) : payout <= 0.6 ? 10 : payout <= 0.8 ? 6 : payout <= 1 ? 3 : 0,
       rule: isReit ? 'Foncière : ≤ 90 % des bénéfices (règles REIT/SIIC)' : '≤ 60 % des bénéfices = soutenable ; > 100 % = dividende non couvert' },
-    { id: 'q-shares', label: "Évolution du nombre d'actions", weight: 2, value: shChg === null ? 'n.d.' : `${shChg > 0 ? '+' : ''}${nf(1).format(shChg * 100)} %/an`,
+    { id: 'q-shares', gauge: gz(shChg, 0.04, -0.02, 'pct'), label: "Évolution du nombre d'actions", weight: 2, value: shChg === null ? 'n.d.' : `${shChg > 0 ? '+' : ''}${nf(1).format(shChg * 100)} %/an`,
       score: shChg === null ? null : lin(shChg, 0.04, -0.02), rule: 'Rachats d’actions (baisse) = favorable ; émissions (dilution) = défavorable (Pontiff et Woodgate, 2008)' },
   ];
   if (payout !== null && payout > 1 && !isReit) redFlags.push('Le dividende dépasse les bénéfices (taux de distribution > 100 %).');
@@ -250,25 +279,25 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
   if (isFinancial) {
     const eqA = equity && totalAssets ? equity / totalAssets : null;
     debtC = [
-      { id: 'fin-capital', label: 'Fonds propres / total du bilan', weight: 3, value: pct(eqA), score: eqA === null ? null : lin(eqA, 0.03, 0.12),
+      { id: 'fin-capital', gauge: gz(eqA, 0.03, 0.12, 'pct', 0), label: 'Fonds propres / total du bilan', weight: 3, value: pct(eqA), score: eqA === null ? null : lin(eqA, 0.03, 0.12),
         rule: 'Banques / assurances : ≥ 10 % = bien capitalisé ; < 5 % = levier élevé' },
       { id: 'debt-na', label: 'Ratios de dette classiques', weight: 0, value: 'Non applicables', score: null,
         rule: 'La dette est la « matière première » d’une banque : on juge plutôt la capitalisation.' },
     ];
   } else {
     debtC = [
-      { id: 'debt-de', label: 'Dette / capitaux propres', weight: 3,
+      { id: 'debt-de', gauge: de === null ? undefined : gz(de, 2, 0.5, 'x', 0), label: 'Dette / capitaux propres', weight: 3,
         value: de === null ? (negEq ? (solidNegEq ? 'Capitaux propres négatifs (rachats d’actions)' : 'Capitaux propres négatifs') : 'n.d.') : x(de, 2),
         score: de === null ? (negEq && !solidNegEq ? 0 : null) : de <= 0.5 ? 10 : lin(de, 2, 0.5),
         rule: 'Critère Buffett : < 0,5 x excellent ; > 2 x élevé',
         comment: solidNegEq ? 'Fonds propres réduits par les rachats d’actions d’une société rentable : ratio non noté, la dette est jugée sur l’EBITDA et la couverture des intérêts.' : undefined },
-      { id: 'debt-nde', label: 'Dette nette / EBITDA', weight: 3, value: ndE === null ? 'n.d.' : ndE < 0 ? 'Trésorerie nette positive' : x(ndE),
+      { id: 'debt-nde', gauge: gz(ndE, 4, 1, 'x'), label: 'Dette nette / EBITDA', weight: 3, value: ndE === null ? 'n.d.' : ndE < 0 ? 'Trésorerie nette positive' : x(ndE),
         score: ndE === null ? null : ndE <= 1 ? 10 : lin(ndE, 4, 1), rule: '< 1 x très sain ; 1 – 3 x acceptable ; > 4 x risqué' },
-      { id: 'debt-cover', label: 'Couverture des intérêts (EBIT / intérêts)', weight: 2, value: x(cover),
+      { id: 'debt-cover', gauge: gz(cover, 1.5, 10, 'x', 0), label: 'Couverture des intérêts (EBIT / intérêts)', weight: 2, value: x(cover),
         score: cover === null ? (interest === 0 ? 10 : null) : lin(cover, 1.5, 10), rule: '> 8 x confortable (Graham : > 5 x) ; < 2 x fragile' },
-      { id: 'debt-cost', label: 'Taux moyen de la dette', weight: 1, value: pct(costDebt, 2),
+      { id: 'debt-cost', gauge: gz(costDebt, 0.09, 0.03, 'pct', 0), label: 'Taux moyen de la dette', weight: 1, value: pct(costDebt, 2),
         score: costDebt === null ? null : lin(costDebt, 0.09, 0.03), rule: 'Charges d’intérêts / dette moyenne : < 4 % favorable ; > 8 % coûteux' },
-      { id: 'debt-years', label: 'Années de bénéfices pour rembourser la dette LT', weight: 2, value: debtYears === null ? 'n.d.' : `${nf(1).format(debtYears)} ans`,
+      { id: 'debt-years', gauge: gz(debtYears, 8, 3, 'yrs', 0), label: 'Années de bénéfices pour rembourser la dette LT', weight: 2, value: debtYears === null ? 'n.d.' : `${nf(1).format(debtYears)} ans`,
         score: debtYears === null ? (netIncome !== null && netIncome <= 0 ? 0 : null) : debtYears <= 3 ? 10 : lin(debtYears, 8, 3),
         rule: 'Critère Buffett : dette long terme remboursable en ≤ 3-4 ans de bénéfice net' },
     ];
@@ -282,13 +311,13 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
   const fcfPos = fcfH.filter(isNum);
   const cashMc = cash !== null && mcapF ? cash / mcapF : null;
   const cashC: Criterion[] = [
-    { id: 'cash-debt', label: 'Trésorerie / dette totale', weight: 3, value: cash === null || !debtKnown ? 'n.d.' : debt > 0 ? pct(cash / debt, 0) : 'Aucune dette',
+    { id: 'cash-debt', gauge: isFinancial || cash === null || !debtKnown || debt <= 0 ? undefined : gz(cash / debt, 0.1, 1, 'pct', 0), label: 'Trésorerie / dette totale', weight: 3, value: cash === null || !debtKnown ? 'n.d.' : debt > 0 ? pct(cash / debt, 0) : 'Aucune dette',
       score: isFinancial ? null : cash === null || !debtKnown ? null : debt <= 0 ? 10 : lin(cash / debt, 0.1, 1), rule: '≥ 100 % = la trésorerie couvre toute la dette' },
-    { id: 'cash-level', label: 'Niveau de trésorerie', weight: 1, value: `${money(cash, finCcy)}${cashMc !== null ? ` (${pct(cashMc, 0)} de la capitalisation)` : ''}`,
+    { id: 'cash-level', gauge: isFinancial ? undefined : gz(cashMc, 0, 0.15, 'pct', 0), label: 'Niveau de trésorerie', weight: 1, value: `${money(cash, finCcy)}${cashMc !== null ? ` (${pct(cashMc, 0)} de la capitalisation)` : ''}`,
       score: isFinancial || cashMc === null ? null : lin(cashMc, 0, 0.15), rule: 'Part de la capitalisation détenue en liquidités' },
-    { id: 'cash-cr', label: 'Ratio de liquidité générale', weight: 2, value: x(cr, 2),
+    { id: 'cash-cr', gauge: isFinancial ? undefined : gz(cr, 0.7, 2, 'x', 0), label: 'Ratio de liquidité générale', weight: 2, value: x(cr, 2),
       score: isFinancial || cr === null ? null : lin(cr, 0.7, 2), rule: 'Actif courant / passif courant : Graham ≥ 2 ; < 1 = tension possible' },
-    { id: 'cash-fcf', label: 'Flux de trésorerie libre positif', weight: 3, value: fcfPos.length ? `${fcfPos.filter(v => v > 0).length} / ${fcfPos.length} années` : 'n.d.',
+    { id: 'cash-fcf', gauge: isFinancial || !fcfPos.length ? undefined : gz(fcfPos.filter(v => v > 0).length / fcfPos.length, 0, 1, 'pct', 0, 1), label: 'Flux de trésorerie libre positif', weight: 3, value: fcfPos.length ? `${fcfPos.filter(v => v > 0).length} / ${fcfPos.length} années` : 'n.d.',
       score: isFinancial || !fcfPos.length ? null : (fcfPos.filter(v => v > 0).length / fcfPos.length) * 10, rule: 'L’entreprise génère-t-elle du cash chaque année après investissements ?' },
   ];
   if (isFinancial) cashC.forEach(c => { if (c.score === null) c.comment = 'Peu pertinent pour une banque ou une assurance.'; });
@@ -311,18 +340,18 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
   const grahamInPriceCcy = graham && pps && price ? (price * graham) / pps : null;
   const ey = pe ? 1 / pe : null;
   const valC: Criterion[] = [
-    { id: 'val-pe', label: 'PER (cours / bénéfice)', weight: 3, value: pe === null ? (netIncome !== null && netIncome <= 0 ? 'Pertes' : 'n.d.') : x(pe),
+    { id: 'val-pe', gauge: gz(pe, 35, 15, 'x', 0), label: 'PER (cours / bénéfice)', weight: 3, value: pe === null ? (netIncome !== null && netIncome <= 0 ? 'Pertes' : 'n.d.') : x(pe),
       score: pe === null ? (netIncome !== null && netIncome <= 0 ? 0 : null) : pe <= 15 ? 10 : lin(pe, 35, 15), rule: 'Graham : ≤ 15 x ; > 30 x = cher' },
-    { id: 'val-pb', label: 'Cours / valeur comptable', weight: 1, value: x(pb, 2),
+    { id: 'val-pb', gauge: gz(pb, isFinancial ? 3 : 6, 1.5, 'x', 0), label: 'Cours / valeur comptable', weight: 1, value: x(pb, 2),
       score: pb === null ? null : pb <= 1.5 ? 10 : lin(pb, isFinancial ? 3 : 6, 1.5), rule: 'Graham : ≤ 1,5 x (peu fiable quand les rachats ou l’immatériel réduisent les fonds propres)' },
     // v1 notait aussi « PER × P/B ≤ 22,5 » : c'est la même information que la marge de sécurité de Graham
     // (MdS = 1 − √(PER × P/B / 22,5)), désormais notée une seule fois.
-    { id: 'val-mos', label: 'Marge de sécurité (nombre de Graham)', weight: 2,
+    { id: 'val-mos', gauge: gz(mos, -1, 0.33, 'pct', undefined, 1), label: 'Marge de sécurité (nombre de Graham)', weight: 2,
       value: grahamInPriceCcy ? `${pct(mos, 0)} (valeur ${nf(2).format(grahamInPriceCcy)} ${priceCcy} ; PER × P/B = ${pe && pb ? nf(1).format(pe * pb) : 'n.d.'})` : 'n.d.',
       score: mos === null ? null : lin(mos, -1, 0.33), rule: '√(22,5 × BPA × actif net/action), soit PER × P/B ≤ 22,5 ; Graham exige ≥ 33 % de marge' },
-    { id: 'val-ev', label: 'VE / EBITDA', weight: 2, value: x(evE),
+    { id: 'val-ev', gauge: isFinancial ? undefined : gz(evE, 20, 7, 'x', 0), label: 'VE / EBITDA', weight: 2, value: x(evE),
       score: isFinancial || evE === null ? null : evE <= 7 ? 10 : lin(evE, 20, 7), rule: '< 8 x bon marché ; > 15 x cher' },
-    { id: 'val-fcfy', label: 'Rendement du cash-flow libre', weight: 2, value: pct(fcfY),
+    { id: 'val-fcfy', gauge: isFinancial ? undefined : gz(fcfY, 0, 0.08, 'pct'), label: 'Rendement du cash-flow libre', weight: 2, value: pct(fcfY),
       score: isFinancial || fcfY === null ? null : lin(fcfY, 0, 0.08), rule: 'FCF / capitalisation : > 6 % attractif ; < 2 % cher' },
     // Indicatif : entre deux actions, l'écart au taux sans risque ne dépend que du PER (déjà noté).
     { id: 'val-ey', label: 'Rendement des bénéfices vs taux 10 ans', weight: 0,
@@ -330,6 +359,30 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
       score: ey === null ? null : lin(ey - riskFree, -0.03, 0.04), rule: 'Indicatif, non noté (redondant avec le PER) — Buffett : 1/PER doit battre l’obligation d’État (taux US 10 ans)' },
   ];
   categories.push({ id: 'value', label: 'Prix actuel (valorisation)', weight: 25, score: catScore(valC), criteria: valC });
+
+  // --- Prix d'achat : cours auquel chaque critère de valorisation obtiendrait la note maximale (« achat »)
+  // ou la note 7/10 (« raisonnable »). Calculé par proportion au cours actuel, ce qui reste juste pour les
+  // ADR et les cotations en centimes (GBp). Aucune prévision : uniquement les comptes publiés.
+  const methods: PriceMethod[] = [];
+  const addM = (id: string, label: string, buy: number | null, fair: number | null, rule: string) => {
+    if (buy !== null && fair !== null && Number.isFinite(buy) && Number.isFinite(fair) && buy > 0 && fair > 0) methods.push({ id, label, buy, fair: Math.max(fair, buy), rule });
+  };
+  if (price !== null) {
+    if (grahamInPriceCcy) addM('graham', 'Nombre de Graham', grahamInPriceCcy * (1 - 0.33), grahamInPriceCcy,
+      'Valeur √(22,5 × BPA × actif net/action) ; achat avec 33 % de marge de sécurité');
+    if (pe) addM('pe', 'PER', (price * 15) / pe, (price * 21) / pe, 'Achat à PER 15 (Graham) ; raisonnable jusqu’à 21');
+    if (!isFinancial && mcapF && ebitda && ebitda > 0 && cash !== null && debtKnown) {
+      const eqAt = (m: number) => (m * ebitda - debt + cash) / mcapF * price;
+      addM('ev', 'VE / EBITDA', eqAt(7), eqAt(10.9), 'Achat à 7 x l’EBITDA ; raisonnable jusqu’à 10,9 x (dette nette déduite)');
+    }
+    if (!isFinancial && mcapF && fcfL !== null && fcfL > 0) addM('fcf', 'Cash-flow libre', (fcfL / 0.08) / mcapF * price, (fcfL / 0.056) / mcapF * price,
+      'Achat à 8 % de rendement du cash-flow libre ; raisonnable jusqu’à 5,6 %');
+    if (isFinancial && pb) addM('pb', 'Valeur comptable', (price * 1.5) / pb, (price * 1.95) / pb, 'Banques / assurances : achat à 1,5 x l’actif net ; raisonnable jusqu’à 1,95 x');
+  }
+  const priceTargets: PriceTargets = {
+    price, currency: priceCcy, methods, buy: median(methods.map(m => m.buy)), fair: median(methods.map(m => m.fair)),
+    note: methods.length ? undefined : (netIncome !== null && netIncome <= 0 ? 'Pas de prix d’achat calculable : l’entreprise est en perte.' : 'Données insuffisantes pour calculer un prix d’achat.'),
+  };
 
   // ===== 5. Chiffre d'affaires
   const revF = revenue.filter(isNum);
@@ -340,9 +393,9 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
   // annonce plutôt des rendements inférieurs (Lakonishok, Shleifer & Vishny, 1994) : on vérifie seulement que
   // l'activité ne recule pas, sans récompenser une croissance rapide (plafond à +4 %/an).
   const revC: Criterion[] = [
-    { id: 'rev-cagr', label: `Croissance annuelle moyenne (${n ? years[0] + '–' + years[years.length - 1] : '—'})`, weight: 2, value: pct(cagr),
+    { id: 'rev-cagr', gauge: gz(cagr, -0.04, 0.04, 'pct'), label: `Croissance annuelle moyenne (${n ? years[0] + '–' + years[years.length - 1] : '—'})`, weight: 2, value: pct(cagr),
       score: cagr === null ? null : lin(cagr, -0.04, 0.04), rule: '≥ +4 %/an = activité en progression (pas de bonus au-delà) ; négative = activité en recul' },
-    { id: 'rev-reg', label: 'Régularité de la croissance', weight: 2, value: n >= 2 ? `${up} hausse${up > 1 ? 's' : ''} sur ${n - 1} an${n > 2 ? 's' : ''}` : 'n.d.',
+    { id: 'rev-reg', gauge: n >= 2 ? gz(up / (n - 1), 0, 1, 'pct', 0, 1) : undefined, label: 'Régularité de la croissance', weight: 2, value: n >= 2 ? `${up} hausse${up > 1 ? 's' : ''} sur ${n - 1} an${n > 2 ? 's' : ''}` : 'n.d.',
       score: n >= 2 ? (up / (n - 1)) * 10 : null, rule: 'Buffett privilégie les activités prévisibles' },
   ];
   categories.push({ id: 'revenue', label: "Chiffre d'affaires", weight: 5, score: catScore(revC), criteria: revC });
@@ -356,11 +409,11 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
   const ebC: Criterion[] = isFinancial ? [
     { id: 'eb-na', label: 'EBITDA', weight: 0, value: 'Non applicable', score: null, rule: 'L’EBITDA n’a pas de sens pour une banque ou une assurance.' },
   ] : [
-    { id: 'eb-margin', label: "Marge d'EBITDA", weight: 2, value: pct(ebMargin), score: ebMargin === null ? null : lin(ebMargin, 0.05, 0.3),
+    { id: 'eb-margin', gauge: gz(ebMargin, 0.05, 0.3, 'pct'), label: "Marge d'EBITDA", weight: 2, value: pct(ebMargin), score: ebMargin === null ? null : lin(ebMargin, 0.05, 0.3),
       rule: '> 25 % = avantage concurrentiel probable ; < 10 % = activité peu rentable' },
-    { id: 'eb-cagr', label: "Croissance annuelle de l'EBITDA", weight: 1, value: pct(ebCagr), score: ebCagr === null ? (ebV.some(v => v <= 0) ? 0 : null) : lin(ebCagr, -0.05, 0.05),
+    { id: 'eb-cagr', gauge: gz(ebCagr, -0.05, 0.05, 'pct'), label: "Croissance annuelle de l'EBITDA", weight: 1, value: pct(ebCagr), score: ebCagr === null ? (ebV.some(v => v <= 0) ? 0 : null) : lin(ebCagr, -0.05, 0.05),
       rule: 'Évolution historique : ≥ +5 %/an = favorable (pas de bonus au-delà)' },
-    { id: 'eb-trend', label: 'Évolution de la marge', weight: 1, value: marginTrend === null ? 'n.d.' : `${marginTrend >= 0 ? '+' : ''}${nf(1).format(marginTrend * 100)} pts`,
+    { id: 'eb-trend', gauge: gz(marginTrend, -0.05, 0.03, 'pts'), label: 'Évolution de la marge', weight: 1, value: marginTrend === null ? 'n.d.' : `${marginTrend >= 0 ? '+' : ''}${nf(1).format(marginTrend * 100)} pts`,
       score: marginTrend === null ? null : lin(marginTrend, -0.05, 0.03), rule: 'Une marge stable ou en hausse traduit un pouvoir de fixation des prix' },
   ];
   categories.push({ id: 'ebitda', label: 'EBITDA', weight: 5, score: catScore(ebC), criteria: ebC });
@@ -418,24 +471,24 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
     altman = 6.56 * wc / totalAssets + 3.26 * re / totalAssets + 6.72 * ebit / totalAssets + 1.05 * equity / tl;
   }
   const qC: Criterion[] = [
-    { id: 'q-roe', label: 'Rentabilité des capitaux propres (ROE moyen)', weight: 2, value: pct(roeAvg),
+    { id: 'q-roe', gauge: gz(roeAvg, 0.04, 0.18, 'pct'), label: 'Rentabilité des capitaux propres (ROE moyen)', weight: 2, value: pct(roeAvg),
       score: roeAvg === null ? null : lin(roeAvg, 0.04, 0.18), rule: 'Buffett : ≥ 15 % durablement, sans dette excessive' },
-    { id: 'q-gpa', label: 'Rentabilité brute des actifs', weight: 2, value: gpa === null ? 'n.d.' : `${pct(gpa)} (marge brute ${pct(gm)})`,
+    { id: 'q-gpa', gauge: isFinancial ? undefined : gz(gpa, 0.05, 0.45, 'pct'), label: 'Rentabilité brute des actifs', weight: 2, value: gpa === null ? 'n.d.' : `${pct(gpa)} (marge brute ${pct(gm)})`,
       score: isFinancial || gpa === null ? null : lin(gpa, 0.05, 0.45),
       rule: 'Marge brute / total de l’actif : ≥ 40 % = rentabilité élevée (Novy-Marx, 2013) ; Buffett : marge brute > 40 % = pouvoir de prix' },
-    { id: 'q-accruals', label: 'Qualité des bénéfices (cash vs bénéfice)', weight: 2,
+    { id: 'q-accruals', gauge: isFinancial ? undefined : gz(accruals, 0.08, -0.08, 'pct'), label: 'Qualité des bénéfices (cash vs bénéfice)', weight: 2,
       value: accruals === null ? 'n.d.' : `${accruals > 0 ? '+' : ''}${nf(1).format(accruals * 100)} % de l’actif`,
       score: isFinancial || accruals === null ? null : lin(accruals, 0.08, -0.08),
       rule: '(Bénéfice − cash-flow d’exploitation) / actif : négatif = bénéfice bien couvert par le cash ; élevé = bénéfice moins durable (Sloan, 1996)' },
-    { id: 'q-nm', label: 'Marge nette moyenne', weight: 1, value: pct(nmAvg), score: nmAvg === null ? null : lin(nmAvg, 0, isFinancial ? 0.25 : 0.15),
+    { id: 'q-nm', gauge: gz(nmAvg, 0, isFinancial ? 0.25 : 0.15, 'pct'), label: 'Marge nette moyenne', weight: 1, value: pct(nmAvg), score: nmAvg === null ? null : lin(nmAvg, 0, isFinancial ? 0.25 : 0.15),
       rule: 'Buffett : > 10 % signale un avantage concurrentiel (« moat »)' },
-    { id: 'q-profit', label: 'Bénéficiaire chaque année', weight: 2, value: niF.length ? `${profitableYears} / ${niF.length} années` : 'n.d.',
+    { id: 'q-profit', gauge: niF.length ? gz(profitableYears / niF.length, 0, 1, 'pct', 0, 1) : undefined, label: 'Bénéficiaire chaque année', weight: 2, value: niF.length ? `${profitableYears} / ${niF.length} années` : 'n.d.',
       score: niF.length ? (profitableYears / niF.length) * 10 : null, rule: 'Graham : aucun déficit sur la période' },
-    { id: 'q-capex', label: "Investissements / cash-flow d'exploitation", weight: 2, value: pct(capexR, 0),
+    { id: 'q-capex', gauge: isFinancial ? undefined : gz(capexR, 0.9, 0.3, 'pct', 0), label: "Investissements / cash-flow d'exploitation", weight: 2, value: pct(capexR, 0),
       score: isFinancial || capexR === null ? null : lin(capexR, 0.9, 0.3), rule: 'Buffett aime les activités peu gourmandes en capital (< 50 %) ; les entreprises qui investissent peu surperforment (Fama-French, 2015)' },
-    { id: 'q-pio', label: 'Piotroski F-Score', weight: 1, value: pio === null ? 'n.d.' : `${pio} / 9`, score: pio === null ? null : lin(pio, 2, 8),
+    { id: 'q-pio', gauge: gz(pio, 2, 8, 'num', 0, 9), label: 'Piotroski F-Score', weight: 1, value: pio === null ? 'n.d.' : `${pio} / 9`, score: pio === null ? null : lin(pio, 2, 8),
       rule: '8-9 = santé financière solide ; 0-2 = fragile (9 tests comptables)', comment: pio !== null && pioN < 9 ? `Calculé sur ${pioN} tests disponibles, ramené sur 9.` : undefined },
-    { id: 'q-altman', label: "Altman Z''-Score", weight: 1, value: altman === null ? (!altmanOk ? 'Non applicable' : 'n.d.') : nf(2).format(altman),
+    { id: 'q-altman', gauge: gz(altman, 1.1, 2.6, 'num'), label: "Altman Z''-Score", weight: 1, value: altman === null ? (!altmanOk ? 'Non applicable' : 'n.d.') : nf(2).format(altman),
       score: altman === null ? null : lin(altman, 1.1, 2.6), rule: '> 2,6 zone sûre ; 1,1 – 2,6 zone grise ; < 1,1 risque de faillite (modèle 1995, sociétés non industrielles)' },
   ];
   if (netIncome !== null && netIncome < 0) redFlags.push('Perte nette lors du dernier exercice.');
@@ -458,6 +511,7 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
       score = (beats / others.length) * 10;
     }
     return { id: 'peer-' + String(key), label, weight, value: `${fmt(mine)} vs médiane ${fmt(med)}`, score,
+      gauge: score === null ? undefined : gz(score / 10, 0, 1, 'pct', 0, 1),
       rule: lowerIsBetter ? 'Plus bas que les concurrents = mieux' : 'Plus haut que les concurrents = mieux' };
   };
   const peerC: Criterion[] = peers.length >= 2 ? [
@@ -507,6 +561,7 @@ export function computeAnalysis(input: AnalysisInput): Analysis {
     dividends: { byYear: byYear.filter(d => d.year >= nowY - 25), consecutiveYears: consecutive, firstYear, noCutYears: noCut, currency: priceCcy },
     peers: [selfRow, ...peers], peerSource,
     graham: { number: grahamInPriceCcy, marginOfSafety: mos },
+    priceTargets,
     riskFree, updatedAt: asOf.toISOString(), warnings,
   };
 }

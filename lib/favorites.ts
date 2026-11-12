@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import DEFAULTS from '@/data/default-favorites.json';
 
-export interface Fav { s: string; n: string; score?: number; level?: 'buy' | 'watch' | 'avoid'; verdict?: string; at?: string }
+export interface Fav { s: string; n: string; score?: number; level?: 'buy' | 'watch' | 'avoid'; verdict?: string; at?: string; price?: number; buy?: number; fair?: number; ccy?: string }
 const KEY = 'vf-favoris-v1';
 const SEEDED = 'vf-favoris-defaut-v1';
 

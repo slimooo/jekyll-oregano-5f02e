@@ -66,6 +66,22 @@ export default function Methode() {
         <p className="muted">Un critère sans donnée ou non applicable (ex. EBITDA d’une banque, ancienneté du dividende d’une société qui n’en verse pas) est exclu du calcul plutôt que noté zéro.</p>
       </section>
       <section className="card">
+        <h2>Prix d’achat</h2>
+        <p style={{ fontSize: '.92rem' }}>Pour chaque méthode de valorisation, l’application calcule le cours auquel le critère obtiendrait la note maximale (<strong>prix d’achat intéressant</strong>) et celui où il resterait favorable (<strong>prix raisonnable maximum</strong>). Les prix affichés sont la médiane des méthodes disponibles :</p>
+        <ul style={{ fontSize: '.88rem' }}>
+          <li><strong>Nombre de Graham</strong> : √(22,5 × BPA × actif net par action), acheté avec 33 % de marge de sécurité.</li>
+          <li><strong>PER</strong> : achat à 15 fois le bénéfice (Graham), raisonnable jusqu’à 21.</li>
+          <li><strong>VE / EBITDA</strong> : achat à 7 fois l’EBITDA, raisonnable jusqu’à 10,9, dette nette déduite.</li>
+          <li><strong>Cash-flow libre</strong> : achat à 8 % de rendement, raisonnable jusqu’à 5,6 %.</li>
+          <li><strong>Banques et assurances</strong> : 1,5 fois l’actif net (raisonnable jusqu’à 1,95) à la place de l’EBITDA et du cash-flow.</li>
+        </ul>
+        <p className="muted">Zone verte : cours ≤ prix d’achat. Jaune : jusqu’au prix raisonnable. Rouge : au-delà. Une entreprise en perte n’a pas de prix d’achat calculable.</p>
+      </section>
+      <section className="card">
+        <h2>Lire les échelles</h2>
+        <p style={{ fontSize: '.92rem' }}>Chaque critère est placé sur une échelle rouge / jaune / vert. Les seuils correspondent exactement à la notation : rouge sous 4/10, jaune de 4 à 7/10, vert au-delà.</p>
+      </section>
+      <section className="card">
         <h2>Verdict</h2>
         <ul style={{ fontSize: '.92rem' }}>
           <li><strong className="lvl-buy">Achat pertinent</strong> : score ≥ 70, valorisation raisonnable et aucun signal d’alerte.</li>
